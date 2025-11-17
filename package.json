@@ -1,0 +1,22 @@
+{
+  "name": "art-minting",
+  "version": "1.0.0",
+  "description": "A complete NFT minting project using Hardhat and OpenZeppelin.",
+  "scripts": {
+    "test": "hardhat test",
+    "compile": "hardhat compile",
+    "deploy:localhost": "hardhat run scripts/deploy.js --network localhost",
+    "deploy:mumbai": "hardhat run scripts/deploy.js --network mumbai",
+    "deploy:polygon": "hardhat run scripts/deploy.js --network polygon",
+    "start": "npx hardhat node"
+  },
+  "dependencies": {
+    "dotenv": "^10.0.0",
+    "ethers": "^5.7.2",
+    "@nomicfoundation/hardhat-toolbox": "^1.0.0",
+    "@openzeppelin/contracts": "^4.8.0"
+  },
+  "devDependencies": {
+    "hardhat": "^2.12.0"
+  }
+}

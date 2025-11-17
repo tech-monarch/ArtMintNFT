@@ -1,0 +1,62 @@
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-lock.yaml
+
+# Environment files
+.env
+.env.*.local
+.env.local
+.env.test
+.env.production
+
+# Hardhat / Solidity build
+artifacts/
+cache/
+typechain-types/
+typechain/
+coverage/
+coverage-final.json
+
+# Generated frontend files from deploy script
+frontend/abi.json
+frontend/contract-address.json
+
+# TypeScript
+*.tsbuildinfo
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor/IDE
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# Optional: macOS, Windows temp
+*.swp
+*.tmp
+
+# Build outputs
+dist/
+build/
+out/
+
+# Secrets and keys
+*.pem
+*.key
+*.p12
+*.jks

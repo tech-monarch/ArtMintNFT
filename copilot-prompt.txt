@@ -1,0 +1,45 @@
+I want you to generate a full Web3 NFT minting project using Hardhat and OpenZeppelin with the following requirements:
+
+1. Project structure:
+   - contracts/ArtNFT.sol
+   - scripts/deploy.js
+   - frontend/app.js
+   - frontend/index.html(use the existing index.html file in the main folder)
+   - hardhat.config.cjs
+   - package.json
+
+2. Solidity contract (ArtNFT.sol):
+   - Inherits ERC721URIStorage and Ownable.
+   - Constructor takes a platform wallet address.
+   - Minting costs 1 ETH.
+   - Any ETH sent above 1 ETH is automatically sent to the platform wallet.
+   - Keeps a tokenCounter for minted NFTs.
+   - Has a mint function: `mint(string memory tokenURI)`.
+
+3. Hardhat deployment (deploy.js):
+   - Deploy the ArtNFT contract to localhost network.
+   - Logs deployer address and deployed contract address.
+   - Uses Ethers.js to deploy.
+
+4. Hardhat config (hardhat.config.cjs):
+   - Solidity version 0.8.20
+   - localhost network: url = http://127.0.0.1:8545
+   - Require @nomicfoundation/hardhat-toolbox
+
+5. Frontend:
+   - index.html: simple form with input for tokenURI and a mint button.
+   - app.js: connects to MetaMask, calls the mint function, sends exactly 1 ETH, refunds excess to platform wallet.
+   - Uses ethers.js and the ABI from compiled contract.
+
+6. Include all necessary imports and instructions for running locally:
+   - `npx hardhat node`
+   - `npx hardhat compile`
+   - `npx hardhat run scripts/deploy.js --network localhost`
+
+7. Make sure all ESM/CommonJS issues are handled:
+   - Use `.cjs` for hardhat.config
+   - Use `import hre from "hardhat";` in deploy.js
+
+8. The generated code should be fully working if copied into VS Code, installed with npm, and run.
+
+Please generate all files with correct paths and complete code.

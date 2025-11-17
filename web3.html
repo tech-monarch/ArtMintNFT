@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ArtHashChain | Mint Your Digital Art</title>
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.8.0/dist/web3.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-sha256/0.9.0/sha256.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+    <style>
+        :root {
+            --primary: #8247e5;
+            --secondary: #1e1e1e;
+            --light: #f8f9fa;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 20px;
+            color: var(--secondary);
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        h1 {
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+        .wallet-status {
+            padding: 0.5rem 1rem;
+            background: #e9ecef;
+            border-radius: 20px;
+            display: inline-block;
+            margin-bottom: 1rem;
+        }
+        .connected {
+            background: #d4edda;
+            color: #155724;
+        }
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        label {
+            font-weight: 600;
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ced4da;
+            border-radius: 8px;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        .image-upload {
+            border: 2px dashed #ced4da;
+            padding: 2rem;
+            text-align: center;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 1rem;
+        }
+        .image-upload:hover {
+            border-color: var(--primary);
+        }
+        .image-preview {
+            max-width: 100%;
+            max-height: 300px;
+            margin-top: 1rem;
+            display: none;
+            border-radius: 8px;
+        }
+        .btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            font-size: 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: inline-block;
+            margin-right: 1rem;
+        }
+        .btn:hover {
+            background: #6c3dba;
+            transform: translateY(-2px);
+        }
+        .btn:disabled {
+            background: #adb5bd;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .hash-display {
+            word-break: break-all;
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 8px;
+            font-family: monospace;
+            margin-bottom: 1rem;
+            display: none;
+        }
+        .status {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+            display: none;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .network-indicator {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            padding: 0.5rem 1rem;
+            background: #e9ecef;
+            border-radius: 20px;
+            font-size: 0.9rem;
+        }
+        .polygon-connected {
+            background: #8247e5;
+            color: white;
+        }
+        .mumbai-connected {
+            background: #8a2be2;
+            color: white;
+        }
+        .logo {
+            max-width: 100%;
+            height: auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+    
+        }
+
+        .logo a:hover img{
+            opacity: 0.9;
+            transition: 0.3s;
+        }
+        .hash-display {
+      word-break: break-all;
+      background: #f8f9fa;
+      padding: 1rem;
+      border-radius: 8px;
+      font-family: monospace;
+      margin-bottom: 1rem;
+      display: none;
+    }
+    </style>
+</head>
+<body>
+    <div class="network-indicator" id="networkIndicator">Network: Not Connected</div>
+    
+    <div class="container">
+        <header>
+            <h1 class="logo"><a href="#">
+                <img src="ArtHashLogoWeb.png" width="250" height="250">
+            </a>
+                </h1>
+            <p>Mint Your Digital Art to Polygon Blockchain</p>
+            <button id="connectWallet" class="btn btn-wallet">Connect MetaMask</button>
+            <p id="walletAddress"></p>
+            <div class="wallet-status" id="walletStatus">Wallet: Not connected</div>
+        </header>
+
+        <div class="form-group">
+            <label for="artistName">Artist Name</label>
+            <input type="text" id="artistName" required placeholder="Enter your artist name">
+        </div>
+
+        <div class="form-group">
+            <label for="artTitle">Art Title</label>
+            <input type="text" id="artTitle" required placeholder="Enter your artwork title">
+        </div>
+
+        <div class="form-group">
+            <label for="description">Description</label>
+            <textarea id="description" required placeholder="Describe your artwork"></textarea>
+        </div>
+
+        <div class="form-group">
+            <label>Upload Image</label>
+            <div class="image-upload" id="imageUpload">
+                <p>Click to select or drag & drop your artwork</p>
+                <input type="file" id="artFile" accept="image/*" style="display: none;">
+                <img id="imagePreview" class="image-preview" alt="Artwork preview">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <div id="hashDisplay" class="hash-display"></div>
+        </div>
+
+        <button type="button" class="btn" id="generateHashBtn" disabled>Generate Hash</button>
+        <button type="button" class="btn" id="mintBtn" disabled>Mint</button>
+        
+        <div id="statusMessage" class="status"></div>
+
+        <div class="hash-display" id="hashDisplay"></div>
+    <div class="status" id="statusMessage"></div>
+    </div>
+    <script>
+        document.getElementById("connectWallet"). 
+        onclick = async function name(params) {
+            if (typeof Window.ethereum ! == 'undefined') {
+        }
+    </script>
+    <script>
+        // Global variables
+        let web3;
+        let accounts = [];
+        let generatedHash = '';
+        let imageFile = null;
+
+        // Contract details (replace with your actual contract)
+        const contractABI = []; // Your contract ABI here
+        const contractAddress = "0xYourContractAddressOnPolygon";
+
+        // DOM elements
+        const walletStatus = document.getElementById('walletStatus');
+        const networkIndicator = document.getElementById('networkIndicator');
+        const generateHashBtn = document.getElementById('generateHashBtn');
+        const mintBtn = document.getElementById('mintBtn');
+        const imageUpload = document.getElementById('imageUpload');
+        const artFile = document.getElementById('artFile');
+        const imagePreview = document.getElementById('imagePreview');
+        const hashDisplay = document.getElementById('hashDisplay');
+        const statusMessage = document.getElementById('statusMessage');
+
+        // Initialize when page loads
+        window.addEventListener('load', async () => {
+            await initWeb3();
+            setupEventListeners();
+        });
+
+        // Initialize Web3
+        async function initWeb3() {
+            if (window.ethereum) {
+                web3 = new Web3(window.ethereum);
+                try {
+                    // Request account access
+                    accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    updateWalletStatus(true);
+                    
+                    // Check network
+                    checkNetwork();
+                    
+                    // Listen for account changes
+                    window.ethereum.on('accountsChanged', (newAccounts) => {
+                        accounts = newAccounts;
+                        updateWalletStatus(newAccounts.length > 0);
+                    });
+                    
+                    // Listen for chain changes
+                    window.ethereum.on('chainChanged', (chainId) => {
+                        window.location.reload();
+                    });
+                    
+                } catch (error) {
+                    console.error("User denied account access", error);
+                    updateStatus('error', 'Please connect your wallet to continue');
+                }
+            } else {
+                updateStatus('error', 'Please install MetaMask or another Web3 wallet');
+            }
+        }
+
+        // Check if connected to Polygon
+        async function checkNetwork() {
+            const chainId = await web3.eth.getChainId();
+            if (chainId === 137) { // Polygon Mainnet
+                networkIndicator.textContent = "Network: Polygon Mainnet";
+                networkIndicator.classList.add('polygon-connected');
+            } else {
+                networkIndicator.textContent = `Network: Wrong Network (Switch to Polygon)`;
+                updateStatus('error', 'Please switch to Polygon Mainnet in your wallet');
+            }
+        }
+
+        // Update wallet connection status
+        function updateWalletStatus(isConnected) {
+            if (isConnected) {
+                const shortAddress = `${accounts[0].substring(0, 6)}...${accounts[0].substring(38)}`;
+                walletStatus.textContent = `Connected Wallet: ${shortAddress}`;
+                walletStatus.classList.add('connected');
+                
+                // Enable mint button if hash exists
+                if (generatedHash) {
+                    mintBtn.disabled = false;
+                }
+            } else {
+                walletStatus.textContent = 'Connected Wallet: Not connected';
+                walletStatus.classList.remove('connected');
+                mintBtn.disabled = true;
+            }
+        }
+
+        // Set up event listeners
+        function setupEventListeners() {
+            // Image upload
+            imageUpload.addEventListener('click', () => artFile.click());
+            artFile.addEventListener('change', handleImageUpload);
+            
+            // Drag and drop
+            imageUpload.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                imageUpload.style.borderColor = 'var(--primary)';
+            });
+            
+            imageUpload.addEventListener('dragleave', () => {
+                imageUpload.style.borderColor = '#ced4da';
+            });
+            
+            imageUpload.addEventListener('drop', (e) => {
+                e.preventDefault();
+                imageUpload.style.borderColor = '#ced4da';
+                if (e.dataTransfer.files.length) {
+                    artFile.files = e.dataTransfer.files;
+                    handleImageUpload();
+                }
+            });
+            
+            // Generate hash button
+            generateHashBtn.addEventListener('click', generateArtHash);
+            
+            // Mint button
+            mintBtn.addEventListener('click', mintArtwork);
+        }
+
+        // Handle image upload
+        function handleImageUpload() {
+            const file = artFile.files[0];
+            if (file && file.type.match('image.*')) {
+                imageFile = file;
+                
+                // Show preview
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    imagePreview.src = e.target.result;
+                    imagePreview.style.display = 'block';
+                    imageUpload.querySelector('p').textContent = file.name;
+                    
+                    // Enable hash generation
+                    generateHashBtn.disabled = false;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        // Generate hash from artwork
+        async function generateArtHash() {
+            if (!imageFile) {
+                updateStatus('error', 'Please upload an image first');
+                return;
+            }
+            
+            updateStatus('loading', 'Generating hash...');
+            generateHashBtn.disabled = true;
+            
+            try {
+                // Read file as ArrayBuffer
+                const arrayBuffer = await readFileAsArrayBuffer(imageFile);
+                
+                // Generate SHA-256 hash
+                const hashBuffer = await crypto.subtle.digest('SHA-256', arrayBuffer);
+                const hashArray = Array.from(new Uint8Array(hashBuffer));
+                generatedHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+                
+                // Get current timestamp
+                const timestamp = new Date().toISOString();
+                
+                // Display hash and timestamp
+                hashDisplay.innerHTML = `
+                    <strong>Artwork Hash:</strong> ${generatedHash}<br>
+                    <strong>Generated At:</strong> ${timestamp}
+                `;
+                hashDisplay.style.display = 'block';
+                
+                // Enable mint button if wallet is connected
+                mintBtn.disabled = accounts.length === 0;
+                
+                updateStatus('success', 'Hash generated successfully!');
+            } catch (error) {
+                console.error("Hash generation failed:", error);
+                updateStatus('error', 'Failed to generate hash');
+                generateHashBtn.disabled = false;
+            }
+        }
+
+        // Helper function to read file as ArrayBuffer
+        function readFileAsArrayBuffer(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        // Mint artwork on Polygon
+        async function mintArtwork() {
+            if (!generatedHash) {
+                updateStatus('error', 'Please generate a hash first');
+                return;
+            }
+            
+            if (accounts.length === 0) {
+                updateStatus('error', 'Please connect your wallet');
+                return;
+            }
+            
+            updateStatus('loading', 'Minting your artwork to Polygon...');
+            mintBtn.disabled = true;
+            
+            try {
+                // Get form data
+                const artistName = document.getElementById('artistName').value;
+                const artTitle = document.getElementById('artTitle').value;
+                const description = document.getElementById('description').value;
+                
+                // In a real app, you would upload to IPFS here
+                // const metadataURI = await uploadToIPFS({ artistName, artTitle, description, image: imageFile });
+                
+                // Initialize contract (replace with your actual contract ABI and address)
+                const contract = new web3.eth.Contract(contractABI, contractAddress);
+                
+                // Call smart contract's mintArt function
+                const tx = await contract.methods.mintArt(generatedHash)
+                    .send({ from: accounts[0] });
+                
+                updateStatus('success', `Artwork minted successfully! TX: ${tx.transactionHash}`);
+                
+                // Reset form
+                resetForm();
+            } catch (error) {
+                console.error("Minting failed:", error);
+                updateStatus('error', `Minting failed: ${error.message}`);
+                mintBtn.disabled = false;
+            }
+        }
+
+        // Update status message
+        function updateStatus(type, message) {
+            statusMessage.textContent = message;
+            statusMessage.style.display = 'block';
+            statusMessage.className = 'status';
+            
+            if (type === 'loading') {
+                statusMessage.innerHTML = `<span class="loading"></span>${message}`;
+                statusMessage.style.background = '#fff3cd';
+                statusMessage.style.color = '#856404';
+            } else if (type === 'success') {
+                statusMessage.classList.add('success');
+            } else if (type === 'error') {
+                statusMessage.classList.add('error');
+            }
+        }
+
+        // Reset form after successful mint
+        function resetForm() {
+            document.getElementById('artistName').value = '';
+            document.getElementById('artTitle').value = '';
+            document.getElementById('description').value = '';
+            artFile.value = '';
+            imagePreview.style.display = 'none';
+            imagePreview.src = '';
+            imageUpload.querySelector('p').textContent = 'Click to select or drag & drop your artwork';
+            hashDisplay.style.display = 'none';
+            generatedHash = '';
+            imageFile = null;
+            generateHashBtn.disabled = true;
+            mintBtn.disabled = true;
+        }
+    </script>
+</body>
+</html>
