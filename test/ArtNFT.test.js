@@ -31,10 +31,8 @@ describe("ArtNFT", function () {
     const platformBefore = await ethers.provider.getBalance(platform.address);
     const aliceBefore = await ethers.provider.getBalance(alice.address);
 
-    // send double value; gasPrice set to 0 to simplify balance math on local node
-    const tx = await art
-      .connect(alice)
-      .mint('{"a":1}', { value: cost.mul(2), gasPrice: 0 });
+    // send double value; do NOT set gasPrice:0 (invalid with EIP-1559 base fee)
+    const tx = await art.connect(alice).mint('{"a":1}', { value: cost.mul(2) });
     const receipt = await tx.wait();
 
     const platformAfter = await ethers.provider.getBalance(platform.address);
