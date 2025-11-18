@@ -269,10 +269,49 @@ document.addEventListener("DOMContentLoaded", () => {
           .map((b) => b.toString(16).padStart(2, "0"))
           .join("");
         const ts = new Date().toISOString();
-        hashDisplay.innerHTML = `<strong>Artwork Hash:</strong> ${generatedHash}<br><strong>Generated At:</strong> ${ts}`;
+        // show hash and generated timestamp
+        hashDisplay.innerHTML = `<strong>Artwork Hash:</strong> <span id="artHashText">${generatedHash}</span><br><strong>Generated At:</strong> ${ts}`;
+        hashDisplay.style.display = "block";
+
+        // add / update copy button next to the hash
+        // remove existing copy button if present
+        const existingCopy = document.getElementById("copyHashBtn");
+        if (existingCopy) existingCopy.remove();
+
+        const copyBtn = document.createElement("button");
+        copyBtn.id = "copyHashBtn";
+        copyBtn.type = "button";
+        copyBtn.className = "btn";
+        copyBtn.style.marginTop = "8px";
+        copyBtn.style.marginLeft = "10px";
+        copyBtn.textContent = "Copy Hash";
+        copyBtn.addEventListener("click", async () => {
+          try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              await navigator.clipboard.writeText(generatedHash);
+            } else {
+              // fallback
+              const tmp = document.createElement("textarea");
+              tmp.value = generatedHash;
+              document.body.appendChild(tmp);
+              tmp.select();
+              document.execCommand("copy");
+              tmp.remove();
+            }
+            const old = copyBtn.textContent;
+            copyBtn.textContent = "Copied";
+            setTimeout(() => {
+              copyBtn.textContent = old;
+            }, 2000);
+          } catch (err) {
+            console.warn("Copy failed", err);
+            setStatus("error", "Copy to clipboard failed");
+          }
+        });
+        hashDisplay.appendChild(copyBtn);
         hashDisplay.style.display = "block";
         setStatus("success", "Hash generated successfully");
-        mintBtn.disabled = accounts.length ? false : true;
+        if (accounts.length) mintBtn.disabled = false;
       } catch (e) {
         console.error(e);
         setStatus("error", "Failed to generate hash");
@@ -340,68 +379,4 @@ document.addEventListener("DOMContentLoaded", () => {
         let mintedId = null;
         if (receipt.events) {
           for (const ev of receipt.events) {
-            if (ev.event === "Minted") {
-              mintedId = ev.args?.tokenId?.toString?.();
-              break;
-            }
-          }
-        }
-        if (!mintedId) {
-          try {
-            for (const log of receipt.logs) {
-              const parsed = contract.interface.parseLog(log);
-              if (parsed && parsed.name === "Minted") {
-                mintedId = parsed.args.tokenId.toString();
-                break;
-              }
-            }
-          } catch (_) {}
-        }
-
-        if (mintedId) {
-          setStatus(
-            "success",
-            `Mint successful — tokenId: ${mintedId} — tx: ${tx.hash}`
-          );
-          try {
-            const uri = await contract.tokenURI(mintedId);
-            const info = document.createElement("div");
-            info.style.marginTop = "8px";
-            info.textContent = `tokenURI: ${uri}`;
-            statusMessage.appendChild(info);
-          } catch (e) {
-            console.warn("tokenURI read failed", e);
-          }
-        } else {
-          setStatus("success", `Mint confirmed — tx: ${tx.hash}`);
-        }
-      } catch (err) {
-        console.error("Mint error:", err);
-        const msg =
-          err?.error?.message ||
-          err?.data?.message ||
-          err?.message ||
-          String(err);
-        setStatus("error", "Mint failed: " + msg);
-        mintBtn.disabled = false;
-      }
-    }
-
-    // auto-connect if wallet already available
-    if (window.ethereum && window.ethereum.selectedAddress) {
-      try {
-        await connectWallet();
-      } catch (_) {}
-    }
-
-    if (typeof window !== "undefined" && window.NFT_STORAGE_KEY) {
-      try {
-        nftStorageKeyInput.value = window.NFT_STORAGE_KEY;
-      } catch (e) {
-        /* ignore if input not present */
-      }
-    }
-  })().catch((e) => {
-    console.error("Frontend init error:", e);
-  });
-});
+            if
