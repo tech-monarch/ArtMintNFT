@@ -60,3 +60,6 @@ out/
 *.key
 *.p12
 *.jks
+
+# Local frontend secrets
+frontend/config.js

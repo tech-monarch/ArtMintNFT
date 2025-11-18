@@ -7,11 +7,16 @@ const POLYGON_PRIVATE_KEY = process.env.POLYGON_PRIVATE_KEY || "";
 const MUMBAI_RPC = process.env.MUMBAI_RPC || "";
 
 module.exports = {
-  solidity: "0.8.20",
+  solidity: {
+    compilers: [
+      {
+        version: "0.8.20",
+        settings: { optimizer: { enabled: true, runs: 200 } },
+      },
+    ],
+  },
   networks: {
-    localhost: {
-      url: "http://127.0.0.1:8545",
-    },
+    localhost: { url: "http://127.0.0.1:8545" },
     mumbai: {
       url:
         MUMBAI_RPC ||

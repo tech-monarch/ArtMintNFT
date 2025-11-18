@@ -1,0 +1,27 @@
+name: Deploy to Mumbai
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      - name: Install
+        run: npm ci
+      - name: Compile & Test
+        run: |
+          npx hardhat compile
+          npx hardhat test
+      - name: Deploy to Mumbai
+        env:
+          INFURA_PROJECT_ID: ${{ secrets.INFURA_PROJECT_ID }}
+          POLYGON_PRIVATE_KEY: ${{ secrets.POLYGON_PRIVATE_KEY }}
+          PLATFORM_WALLET_ADDRESS: ${{ secrets.PLATFORM_WALLET_ADDRESS }}
+        run: npx hardhat run scripts/deploy.js --network mumbai
