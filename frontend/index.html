@@ -279,12 +279,21 @@
         <div><strong>Mint successful!</strong></div>
         <div class="mint-row small" id="mintContractRow">Contract: <span id="mintContract"></span> <button class="btn" id="copyContractBtn" style="padding:6px 10px;margin-left:8px">Copy</button></div>
         <div class="mint-row small" id="mintTokenRow">Token ID: <span id="mintToken"></span> <button class="btn" id="copyTokenBtn" style="padding:6px 10px;margin-left:8px">Copy</button></div>
-        <div class="mint-row small">Metadata (tokenURI): <a id="mintMetadataLink" target="_blank"></a> <button class="btn" id="copyMetadataBtn" style="padding:6px 10px;margin-left:8px">Copy</button></div>
+        <!-- <div class="mint-row small">Metadata (tokenURI): <a id="mintMetadataLink" target="_blank"></a> <button class="btn" id="copyMetadataBtn" style="padding:6px 10px;margin-left:8px">Copy</button></div> -->
 
         <div style="margin-top:10px" class="small">
           To show/import this NFT in MetaMask: open MetaMask → Assets (NFTs) → Import NFT → enter the contract address and token ID, then <em>Import</em>.
         </div>
       </div>
+      <div id="metadataDisplay" style="display:none; margin-top:20px; border:1px solid #ccc; padding:15px; border-radius:8px; background:#f9f9f9;">
+        <h3>NFT Preview</h3>
+        <img id="previewImage" src="" alt="Artwork Image" style="max-width:200px; display:block; margin-bottom:10px;"/>
+        <p><strong>Title:</strong> <span id="previewTitle"></span></p>
+        <p><strong>Artist:</strong> <span id="previewArtist"></span></p>
+        <p><strong>Description:</strong> <span id="previewDescription"></span></p>
+        <p><strong>SHA-256 Hash:</strong> <span id="previewHash"></span></p>
+      </div>
+
     </div>
 
     <script>

@@ -336,53 +336,47 @@ async function mintArtwork() {
     return;
   }
 
-  setStatus("loading", "Preparing off-chain backup...");
+  setStatus("loading", "Preparing NFT metadata...");
   mintBtn.disabled = true;
 
   try {
-    // ---------- OFF-CHAIN IMAGE BACKUP ----------
-    const imageBlob = new Blob([imageFile], { type: imageFile.type });
-    const imageUrl = URL.createObjectURL(imageBlob);
-    const imageFileName = imageFile.name || "artwork.png";
-
-    // Auto-download the image
-    const imageLink = document.createElement("a");
-    imageLink.href = imageUrl;
-    imageLink.download = imageFileName;
-    document.body.appendChild(imageLink);
-    imageLink.click();
-    document.body.removeChild(imageLink);
-    URL.revokeObjectURL(imageUrl);
+    const artTitle = (titleInput.value || "Untitled Artwork").trim();
+    const artistName = (artistInput.value || "").trim();
+    const descriptionText = (descInput.value || "").trim();
 
     // ---------- OFF-CHAIN METADATA ----------
     const metadata = {
-      name: (titleInput.value || "Untitled Artwork").trim(),
-      description: (descInput.value || "").trim(),
-      artist: (artistInput.value || "").trim(),
-      // local image reference
-      image: imageFileName,
+      name: artTitle,
+      description: descriptionText,
+      artist: artistName,
+      image: imageFile.name, // local reference
       properties: { sha256: generatedHash, createdAt: new Date().toISOString() },
     };
 
-    const metadataBlob = new Blob([JSON.stringify(metadata, null, 2)], { type: "application/json" });
-    const metadataFileName = `${(titleInput.value || "artwork").replace(/\s+/g, "_")}_metadata.json`;
-    const metadataUrl = URL.createObjectURL(metadataBlob);
-
-    // Auto-download the metadata JSON
-    const metadataLink = document.createElement("a");
-    metadataLink.href = metadataUrl;
-    metadataLink.download = metadataFileName;
-    document.body.appendChild(metadataLink);
-    metadataLink.click();
-    document.body.removeChild(metadataLink);
-    URL.revokeObjectURL(metadataUrl);
-
-    // Use the local metadata file name as tokenURI
+    const metadataFileName = `${artTitle.replace(/\s+/g, "_")}_metadata.json`;
     const tokenURI = metadataFileName;
 
-    setStatus("loading", "Minting on Polygon; confirm in MetaMask...");
+    // ---------- DISPLAY METADATA IN FRONTEND ----------
+    const metadataDisplay = document.getElementById("metadataDisplay");
+    const previewImage = document.getElementById("previewImage");
+    const previewTitle = document.getElementById("previewTitle");
+    const previewArtist = document.getElementById("previewArtist");
+    const previewDescription = document.getElementById("previewDescription");
+    const previewHash = document.getElementById("previewHash");
 
+    if (metadataDisplay && previewImage && previewTitle && previewArtist && previewDescription && previewHash) {
+      previewImage.src = URL.createObjectURL(imageFile);
+      previewTitle.textContent = artTitle;
+      previewArtist.textContent = artistName;
+      previewDescription.textContent = descriptionText;
+      previewHash.textContent = generatedHash;
+      metadataDisplay.style.display = "block";
+    }
+
+    // ---------- ON-CHAIN MINT ----------
+    setStatus("loading", "Minting on Polygon; confirm in MetaMask...");
     const value = MINT_PRICE_WEI || ethers.utils.parseEther("1.0");
+
     try { await contract.estimateGas.mint(tokenURI, { value }); } catch(e) { console.warn(e); }
 
     const tx = await contract.mint(tokenURI, { value });
@@ -416,64 +410,39 @@ async function mintArtwork() {
     copyTokenBtn.onclick = () => copyToClipboard(mintedId ? mintedId.toString() : "");
     copyMetadataBtn.onclick = () => copyToClipboard(mintedTokenURI);
 
-        // ---------- LOCAL JSON STORAGE ----------
-    // ---------- LOCAL JSON STORAGE WITH OFFLINE LINKS ----------
+    // ---------- LOCAL JSON STORAGE ----------
     try {
       let allMints = JSON.parse(localStorage.getItem("allMints") || "[]");
-
-      // Create blobs and object URLs for the image and metadata
-      const imageBlob = new Blob([imageFile], { type: imageFile.type });
-      const imageUrl = URL.createObjectURL(imageBlob);
-
-      const metadataBlob = new Blob([JSON.stringify({
-        name: (titleInput.value || "Untitled Artwork").trim(),
-        description: (descInput.value || "").trim(),
-        artist: (artistInput.value || "").trim(),
-        image: imageFile.name,
-        properties: { sha256: generatedHash, createdAt: new Date().toISOString() },
-      }, null, 2)], { type: "application/json" });
-      const metadataUrl = URL.createObjectURL(metadataBlob);
-      const metadataFileName = `${(titleInput.value || "artwork").replace(/\s+/g, "_")}_metadata.json`;
 
       const localMetadata = {
         tokenId: mintedId || null,
         contract: CONTRACT_ADDRESS,
         tokenURI: mintedTokenURI,
-        artist: (artistInput.value || "").trim(),
-        title: (titleInput.value || "Untitled Artwork").trim(),
-        description: (descInput.value || "").trim(),
+        artist: artistName,
+        title: artTitle,
+        description: descriptionText,
         imageFileName: imageFile.name,
-        imageLocalURL: imageUrl,      // Offline accessible image URL
+        imageLocalURL: URL.createObjectURL(imageFile),
         metadataFileName: metadataFileName,
-        metadataLocalURL: metadataUrl, // Offline accessible metadata URL
+        metadataLocalObj: metadata, // store metadata object
         sha256: generatedHash,
         mintedAt: new Date().toISOString()
       };
 
       allMints.push(localMetadata);
       localStorage.setItem("allMints", JSON.stringify(allMints, null, 2));
-
-      // Optional: auto-download full gallery JSON
-      const blob = new Blob([JSON.stringify(allMints, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `all_minted_artworks.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
     } catch (err) {
       console.warn("Failed to store local metadata:", err);
     }
 
+  } catch (e) {
+    console.error(e);
+    setStatus("error", "Minting failed: " + (e.message || e));
+    mintBtn.disabled = false;
+  }
+}
 
-      } catch (e) {
-        console.error(e);
-        setStatus("error", "Minting failed: " + (e.message || e));
-        mintBtn.disabled = false;
-      }
-    }
+
 
 
 
