@@ -379,4 +379,50 @@ document.addEventListener("DOMContentLoaded", () => {
         let mintedId = null;
         if (receipt.events) {
           for (const ev of receipt.events) {
-            if
+            if (ev.event === "Minted") {
+              const args = ev.args || {};
+              mintedId = args.tokenId || args[2] || null;
+              break;
+            }
+          }
+        }
+        if (mintedId) {
+          setStatus(
+            "success",
+            `Minted! Your artwork ID is ${mintedId}. View on <a target="_blank" href="https://polygonscan.com/tx/${tx.hash}">Polygonscan</a>`
+          );
+        } else {
+          setStatus("success", "Minted! Transaction confirmed.");
+        }
+        mintBtn.disabled = false;
+      } catch (e) {
+        console.error(e);
+        setStatus("error", "Minting failed: " + (e.message || e));
+        mintBtn.disabled = false;
+      }
+    }
+
+    // ensure button touch friendliness: add pointer events fallback
+    function addClickListener(el, handler) {
+      if (!el) return;
+      el.addEventListener("click", handler);
+      el.addEventListener(
+        "touchstart",
+        function touchHandler(e) {
+          e.preventDefault();
+          handler(e);
+        },
+        { once: false }
+      );
+    }
+
+    // example: attach to generate and mint buttons safely
+    // const generateHashBtn = document.getElementById("generateHashBtn");
+    // const mintBtn = document.getElementById("mintBtn");
+    if (generateHashBtn) addClickListener(generateHashBtn, generateArtHash);
+    if (mintBtn) addClickListener(mintBtn, mintArtwork);
+
+    // existing generateArtHash implementation should append #copyHashBtn inside hashDisplay.
+    // ensure any copy button created earlier uses .btn class (styling handled in CSS).
+  })().catch(console.error);
+});
