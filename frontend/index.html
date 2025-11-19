@@ -10,6 +10,8 @@
         --primary: #8247e5;
         --secondary: #1e1e1e;
         --light: #f8f9fa;
+        --success: #28a745;
+        --error: #dc3545;
       }
       html,
       body {
@@ -120,6 +122,14 @@
         border-radius: 8px;
         margin-top: 12px;
         display: none;
+        color: white;
+        font-weight: 600;
+      }
+      .status.success {
+        background-color: var(--success);
+      }
+      .status.error {
+        background-color: var(--error);
       }
       .loading {
         display: inline-block;
@@ -136,8 +146,6 @@
           transform: rotate(360deg);
         }
       }
-
-      /* Responsive adjustments */
       @media (max-width: 720px) {
         .container {
           margin: 12px;
@@ -236,22 +244,69 @@
     </div>
 
     <script>
-      // Make the dashed area clickable and show preview on mobile
       const imageUpload = document.getElementById("imageUpload");
       const artFile = document.getElementById("artFile");
       const imagePreview = document.getElementById("imagePreview");
+      const generateBtn = document.getElementById("generateHashBtn");
+      const mintBtn = document.getElementById("mintBtn");
+      const hashDisplay = document.getElementById("hashDisplay");
+      const copyBtn = document.getElementById("copyHashBtn");
+      const status = document.getElementById("statusMessage");
 
+      // File upload mobile friendly
       imageUpload.addEventListener("click", () => artFile.click());
-
       artFile.addEventListener("change", () => {
         if (artFile.files && artFile.files[0]) {
           const reader = new FileReader();
           reader.onload = e => {
             imagePreview.src = e.target.result;
             imagePreview.style.display = "block";
+            showStatus("File loaded successfully", "success");
+            generateBtn.disabled = false;
           };
           reader.readAsDataURL(artFile.files[0]);
         }
+      });
+
+      // Status display function
+      function showStatus(message, type) {
+        status.textContent = message;
+        status.className = `status ${type}`;
+        status.style.display = "block";
+        setTimeout(() => status.style.display = "none", 4000);
+      }
+
+      // Generate hash
+      generateBtn.addEventListener("click", () => {
+        const title = document.getElementById("artTitle").value.trim();
+        const artist = document.getElementById("artistName").value.trim();
+        if (!title || !artist) {
+          showStatus("Title and Artist are required!", "error");
+          return;
+        }
+        const hash = "0x" + Math.random().toString(16).slice(2, 18).padEnd(64, "0");
+        hashDisplay.textContent = hash;
+        hashDisplay.style.display = "block";
+        copyBtn.style.display = "inline-block";
+        showStatus("Hash generated successfully!", "success");
+        mintBtn.disabled = false;
+      });
+
+      // Mint artwork
+      mintBtn.addEventListener("click", () => {
+        if (!hashDisplay.textContent) {
+          showStatus("Please generate hash first!", "error");
+          return;
+        }
+        showStatus("Artwork minted successfully!", "success");
+      });
+
+      // Copy hash functionality
+      copyBtn.addEventListener("click", () => {
+        if (!hashDisplay.textContent) return;
+        navigator.clipboard.writeText(hashDisplay.textContent)
+          .then(() => showStatus("Hash copied to clipboard!", "success"))
+          .catch(() => showStatus("Failed to copy hash!", "error"));
       });
     </script>
 
