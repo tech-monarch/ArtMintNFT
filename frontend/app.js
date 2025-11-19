@@ -167,7 +167,7 @@ document.addEventListener("DOMContentLoaded", () => {
         await provider.send("eth_requestAccounts", []);
         signer = provider.getSigner();
         accounts = await provider.listAccounts();
-        walletAddressEl.textContent = accounts[0] || "";
+        walletAddressEl.textContent = accounts[0] || ""; //the faulty line
         walletStatusEl.textContent = accounts.length
           ? `Connected Wallet: ${accounts[0].slice(0, 6)}...${accounts[0].slice(
               -4
