@@ -196,6 +196,36 @@
         margin-top: 8px;
       }
     </style>
+    
+    <style>
+      /* (keep your existing CSS exactly as before) */
+      :root { --primary: #8247e5; --secondary: #1e1e1e; --light: #f8f9fa; --success: #28a745; --error: #dc3545; }
+      html,body{height:100%;margin:0;padding:0;font-family:Segoe UI, Tahoma, Geneva, Verdana, sans-serif;background:#f5f5f5;color:var(--secondary);-webkit-font-smoothing:antialiased}
+      .container{max-width:920px;margin:20px auto;background:#fff;border-radius:14px;box-shadow:0 6px 18px rgba(0,0,0,.08);padding:28px;box-sizing:border-box}
+      header{text-align:center;margin-bottom:20px}
+      h1.logo img{width:160px;height:auto;display:block;margin:0 auto}
+      p{margin:6px 0 14px}
+      .wallet-status{display:inline-block;padding:6px 12px;border-radius:18px;background:#e9ecef;font-size:.95rem}
+      .form-group{margin-bottom:14px}
+      label{display:block;font-weight:600;margin-bottom:6px}
+      input[type="text"],textarea{width:100%;padding:10px;border:1px solid #d6d6d6;border-radius:8px;font-size:1rem;box-sizing:border-box}
+      textarea{min-height:90px;resize:vertical}
+      .image-upload{border:2px dashed #ced4da;padding:16px;border-radius:8px;text-align:center;cursor:pointer;transition:border-color .2s}
+      .image-preview{display:block;max-width:100%;height:auto;margin-top:12px;border-radius:8px}
+      .btn{background:var(--primary);color:white;border:none;padding:12px 18px;border-radius:10px;cursor:pointer;font-weight:700;font-size:1rem;display:inline-block}
+      .btn:disabled{opacity:.65;cursor:not-allowed}
+      .controls{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+      .hash-display{word-break:break-all;background:#fafafa;padding:10px;border-radius:8px;font-family:monospace;display:none}
+      .status{padding:10px;border-radius:8px;margin-top:12px;display:none;color:white;font-weight:600}
+      .status.success{background-color:var(--success)}
+      .status.error{background-color:var(--error)}
+      .loading{display:inline-block;width:18px;height:18px;border:3px solid rgba(255,255,255,.25);border-radius:50%;border-top-color:white;animation:spin 1s linear infinite;margin-right:8px}
+      @keyframes spin{to{transform:rotate(360deg)}}
+      #copyHashBtn{display:inline-block;margin-top:8px}
+      .mint-result{margin-top:18px;padding:14px;border-radius:8px;background:#f8f9ff}
+      .mint-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+      .small{font-size:.9rem;color:#555}
+    </style>
   </head>
   <body>
     <div class="network-indicator" id="networkIndicator"></div>
@@ -243,6 +273,18 @@
       <div id="hashDisplay" class="hash-display"></div>
       <button class="btn" id="copyHashBtn" style="display:none">Copy Hash</button>
       <div id="statusMessage" class="status" style="margin-bottom: 3rem;"></div>
+      
+      <!-- NEW: Mint result + copy buttons -->
+      <div id="mintResult" class="mint-result" style="display:none">
+        <div><strong>Mint successful!</strong></div>
+        <div class="mint-row small" id="mintContractRow">Contract: <span id="mintContract"></span> <button class="btn" id="copyContractBtn" style="padding:6px 10px;margin-left:8px">Copy</button></div>
+        <div class="mint-row small" id="mintTokenRow">Token ID: <span id="mintToken"></span> <button class="btn" id="copyTokenBtn" style="padding:6px 10px;margin-left:8px">Copy</button></div>
+        <div class="mint-row small">Metadata (tokenURI): <a id="mintMetadataLink" target="_blank"></a> <button class="btn" id="copyMetadataBtn" style="padding:6px 10px;margin-left:8px">Copy</button></div>
+
+        <div style="margin-top:10px" class="small">
+          To show/import this NFT in MetaMask: open MetaMask → Assets (NFTs) → Import NFT → enter the contract address and token ID, then <em>Import</em>.
+        </div>
+      </div>
     </div>
 
     <script>

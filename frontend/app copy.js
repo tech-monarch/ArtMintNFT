@@ -1,11 +1,6 @@
-// frontend/app.js
-// Requires: config.js with window.NFT_STORAGE_KEY
-// Expects: frontend/contract-address.json and frontend/abi.json (deployed contract + ABI)
-// Uses fetch to call NFT.storage API: https://api.nft.storage
-
 document.addEventListener("DOMContentLoaded", () => {
   (async function () {
-    // --- load contract metadata written by deploy script
+    // load contract metadata written by deploy script
     let CONTRACT_ADDRESS = null;
     let contractABI = null;
     try {
@@ -42,6 +37,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // DOM refs
     let connectBtn = document.getElementById("connectWallet");
+    // fallback: if id changed, try class selector
     if (!connectBtn)
       connectBtn =
         document.querySelector(".btn-wallet") ||
@@ -60,15 +56,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const artistInput = document.getElementById("artistName");
     const titleInput = document.getElementById("artTitle");
     const descInput = document.getElementById("description");
-
-    // mint result elements
-    const mintResult = document.getElementById("mintResult");
-    const mintContract = document.getElementById("mintContract");
-    const mintToken = document.getElementById("mintToken");
-    const mintMetadataLink = document.getElementById("mintMetadataLink");
-    const copyContractBtn = document.getElementById("copyContractBtn");
-    const copyTokenBtn = document.getElementById("copyTokenBtn");
-    const copyMetadataBtn = document.getElementById("copyMetadataBtn");
+    const nftStorageKeyInput = document.getElementById("nftStorageKey");
 
     let provider, signer, contract;
     let accounts = [];
@@ -76,8 +64,6 @@ document.addEventListener("DOMContentLoaded", () => {
     let imageFile = null;
     let MINT_PRICE_WEI = null;
     let currentChainId = null;
-
-    // const NFT_STORAGE_KEY = window.NFT_STORAGE_KEY || "";
 
     function setStatus(type, text) {
       statusMessage.style.display = "block";
@@ -101,7 +87,9 @@ document.addEventListener("DOMContentLoaded", () => {
         });
         return true;
       } catch (switchError) {
+        // 4902 indicates the chain is not added in MetaMask
         if (switchError.code === 4902) {
+          // Add network parameters for Polygon / Mumbai
           const params =
             chainId === 137
               ? {
@@ -112,7 +100,11 @@ document.addEventListener("DOMContentLoaded", () => {
                     symbol: "MATIC",
                     decimals: 18,
                   },
-                  rpcUrls: [`https://polygon-rpc.com`],
+                  rpcUrls: [
+                    process.env && process.env.POLYGON_RPC
+                      ? process.env.POLYGON_RPC
+                      : `https://polygon-rpc.com`,
+                  ],
                   blockExplorerUrls: ["https://polygonscan.com/"],
                 }
               : {
@@ -123,7 +115,11 @@ document.addEventListener("DOMContentLoaded", () => {
                     symbol: "MATIC",
                     decimals: 18,
                   },
-                  rpcUrls: [`https://rpc-mumbai.maticvigil.com`],
+                  rpcUrls: [
+                    process.env && process.env.MUMBAI_RPC
+                      ? process.env.MUMBAI_RPC
+                      : `https://rpc-mumbai.maticvigil.com`,
+                  ],
                   blockExplorerUrls: ["https://mumbai.polygonscan.com/"],
                 };
           try {
@@ -162,7 +158,7 @@ document.addEventListener("DOMContentLoaded", () => {
         await provider.send("eth_requestAccounts", []);
         signer = provider.getSigner();
         accounts = await provider.listAccounts();
-        walletAddressEl.textContent = accounts[0] || "";
+        walletAddressEl.textContent = accounts[0] || ""; //the faulty line
         walletStatusEl.textContent = accounts.length
           ? `Connected Wallet: ${accounts[0].slice(0, 6)}...${accounts[0].slice(
               -4
@@ -172,6 +168,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const net = await provider.getNetwork();
         updateNetworkUI(net.chainId);
 
+        // if not supported chain, suggest switch to Mumbai (for testing) or Polygon
         if (![80001, 137, 31337].includes(net.chainId)) {
           setStatus(
             "error",
@@ -197,6 +194,7 @@ document.addEventListener("DOMContentLoaded", () => {
         window.ethereum.on("chainChanged", (hexChain) => {
           const id = parseInt(hexChain, 16);
           updateNetworkUI(id);
+          // reload to re-init contract if network changed
           location.reload();
         });
       } catch (err) {
@@ -205,7 +203,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    // file upload UI handlers
+    // handle file upload / hash generation (unchanged behavior)
     imageUpload.addEventListener("click", () => artFile.click());
     imageUpload.addEventListener("dragover", (e) => {
       e.preventDefault();
@@ -225,8 +223,11 @@ document.addEventListener("DOMContentLoaded", () => {
     artFile.addEventListener("change", handleImageUpload);
     generateHashBtn.addEventListener("click", generateArtHash);
     mintBtn.addEventListener("click", mintArtwork);
+    // safe attach for connect button
     if (connectBtn) {
       connectBtn.addEventListener("click", connectWallet);
+    } else {
+      console.warn("Connect button not found in DOM");
     }
 
     function handleImageUpload() {
@@ -237,8 +238,7 @@ document.addEventListener("DOMContentLoaded", () => {
         reader.onload = (e) => {
           imagePreview.src = e.target.result;
           imagePreview.style.display = "block";
-          const p = imageUpload.querySelector("p");
-          if (p) p.textContent = file.name;
+          imageUpload.querySelector("p").textContent = file.name;
           generateHashBtn.disabled = false;
         };
         reader.readAsDataURL(file);
@@ -260,10 +260,15 @@ document.addEventListener("DOMContentLoaded", () => {
           .map((b) => b.toString(16).padStart(2, "0"))
           .join("");
         const ts = new Date().toISOString();
+        // show hash and generated timestamp
         hashDisplay.innerHTML = `<strong>Artwork Hash:</strong> <span id="artHashText">${generatedHash}</span><br><strong>Generated At:</strong> ${ts}`;
         hashDisplay.style.display = "block";
+
+        // add / update copy button next to the hash
+        // remove existing copy button if present
         const existingCopy = document.getElementById("copyHashBtn");
         if (existingCopy) existingCopy.remove();
+
         const copyBtn = document.createElement("button");
         copyBtn.id = "copyHashBtn";
         copyBtn.type = "button";
@@ -276,6 +281,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (navigator.clipboard && navigator.clipboard.writeText) {
               await navigator.clipboard.writeText(generatedHash);
             } else {
+              // fallback
               const tmp = document.createElement("textarea");
               tmp.value = generatedHash;
               document.body.appendChild(tmp);
@@ -304,170 +310,82 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    // ---------- NFT.storage helper functions (COMMENTED OUT) ----------
-    // async function uploadFileToNFTStorage(file) { ... }
-    // async function uploadJSONToNFTStorage(jsonObj) { ... }
-    // function ipfsGatewayUrl(cid) { ... }
-
-    // ---------- Mint flow ----------
-async function mintArtwork() {
-  if (!generatedHash) {
-    setStatus("error", "Please generate a hash first");
-    return;
-  }
-  if (!accounts.length) {
-    setStatus("error", "Connect your wallet first");
-    return;
-  }
-
-  const supported = [31337, 80001, 137];
-  if (!supported.includes(currentChainId)) {
-    const switched = await switchToChain(80001).catch(() => false);
-    if (!switched) {
-      setStatus("error", "Please switch MetaMask to Mumbai (80001) or Polygon (137) and retry.");
-      return;
-    }
-    location.reload();
-    return;
-  }
-
-  if (!imageFile) {
-    setStatus("error", "No image uploaded");
-    return;
-  }
-
-  setStatus("loading", "Preparing off-chain backup...");
-  mintBtn.disabled = true;
-
-  try {
-    // ---------- OFF-CHAIN IMAGE BACKUP ----------
-    const imageBlob = new Blob([imageFile], { type: imageFile.type });
-    const imageUrl = URL.createObjectURL(imageBlob);
-    const imageFileName = imageFile.name || "artwork.png";
-
-    // Auto-download the image
-    const imageLink = document.createElement("a");
-    imageLink.href = imageUrl;
-    imageLink.download = imageFileName;
-    document.body.appendChild(imageLink);
-    imageLink.click();
-    document.body.removeChild(imageLink);
-    URL.revokeObjectURL(imageUrl);
-
-    // ---------- OFF-CHAIN METADATA ----------
-    const metadata = {
-      name: (titleInput.value || "Untitled Artwork").trim(),
-      description: (descInput.value || "").trim(),
-      artist: (artistInput.value || "").trim(),
-      // local image reference
-      image: imageFileName,
-      properties: { sha256: generatedHash, createdAt: new Date().toISOString() },
-    };
-
-    const metadataBlob = new Blob([JSON.stringify(metadata, null, 2)], { type: "application/json" });
-    const metadataFileName = `${(titleInput.value || "artwork").replace(/\s+/g, "_")}_metadata.json`;
-    const metadataUrl = URL.createObjectURL(metadataBlob);
-
-    // Auto-download the metadata JSON
-    const metadataLink = document.createElement("a");
-    metadataLink.href = metadataUrl;
-    metadataLink.download = metadataFileName;
-    document.body.appendChild(metadataLink);
-    metadataLink.click();
-    document.body.removeChild(metadataLink);
-    URL.revokeObjectURL(metadataUrl);
-
-    // Use the local metadata file name as tokenURI
-    const tokenURI = metadataFileName;
-
-    setStatus("loading", "Minting on Polygon; confirm in MetaMask...");
-
-    const value = MINT_PRICE_WEI || ethers.utils.parseEther("1.0");
-    try { await contract.estimateGas.mint(tokenURI, { value }); } catch(e) { console.warn(e); }
-
-    const tx = await contract.mint(tokenURI, { value });
-    setStatus("loading", "Transaction submitted: " + tx.hash + " — waiting for confirmation...");
-    const receipt = await tx.wait();
-
-    let mintedId = null;
-    let mintedTokenURI = tokenURI;
-    if (receipt && receipt.events) {
-      for (const ev of receipt.events) {
-        if (ev.event === "Minted") {
-          const args = ev.args || {};
-          mintedId = args.tokenId ? args.tokenId.toString() : null;
-          mintedTokenURI = args.tokenURI || mintedTokenURI;
-          break;
-        }
+    async function mintArtwork() {
+      if (!generatedHash) {
+        setStatus("error", "Please generate a hash first");
+        return;
       }
-    }
+      if (!accounts.length) {
+        setStatus("error", "Connect your wallet first");
+        return;
+      }
 
-    // ---------- UI Updates ----------
-    mintContract.textContent = CONTRACT_ADDRESS;
-    mintToken.textContent = mintedId || "(unknown)";
-    mintMetadataLink.textContent = mintedTokenURI;
-    mintMetadataLink.href = mintedTokenURI;
-    mintResult.style.display = "block";
+      // enforce supported chain
+      const supported = [31337, 80001, 137];
+      if (!supported.includes(currentChainId)) {
+        // try to auto-switch to Mumbai (preferred for testing)
+        const switched = await switchToChain(80001).catch(() => false);
+        if (!switched) {
+          setStatus(
+            "error",
+            "Please switch MetaMask to Mumbai (80001) or Polygon (137) and retry."
+          );
+          return;
+        }
+        // reload to reconnect
+        location.reload();
+        return;
+      }
 
-    setStatus("success", `Minted! Token ID: ${mintedId || "(see contract)"}`);
-    mintBtn.disabled = false;
+      const currency = CHAIN_INFO[currentChainId]?.symbol || "NATIVE";
+      setStatus(
+        "loading",
+        `Minting your artwork. Confirm in MetaMask (price in ${currency})...`
+      );
+      mintBtn.disabled = true;
+      try {
+        const meta = JSON.stringify({
+          imageHash: generatedHash,
+          artist: (artistInput.value || "").trim(),
+          title: (titleInput.value || "").trim(),
+          description: (descInput.value || "").trim(),
+          timestamp: new Date().toISOString(),
+        });
 
-    copyContractBtn.onclick = () => copyToClipboard(CONTRACT_ADDRESS);
-    copyTokenBtn.onclick = () => copyToClipboard(mintedId ? mintedId.toString() : "");
-    copyMetadataBtn.onclick = () => copyToClipboard(mintedTokenURI);
+        const value = MINT_PRICE_WEI || ethers.utils.parseEther("1.0");
+        try {
+          await contract.estimateGas.mint(meta, { value });
+        } catch (e) {
+          console.warn("estimateGas failed", e);
+        }
 
-        // ---------- LOCAL JSON STORAGE ----------
-    // ---------- LOCAL JSON STORAGE WITH OFFLINE LINKS ----------
-    try {
-      let allMints = JSON.parse(localStorage.getItem("allMints") || "[]");
+        const tx = await contract.mint(meta, { value });
+        setStatus(
+          "loading",
+          "Transaction submitted: " + tx.hash + " — waiting for confirmation..."
+        );
+        const receipt = await tx.wait();
 
-      // Create blobs and object URLs for the image and metadata
-      const imageBlob = new Blob([imageFile], { type: imageFile.type });
-      const imageUrl = URL.createObjectURL(imageBlob);
-
-      const metadataBlob = new Blob([JSON.stringify({
-        name: (titleInput.value || "Untitled Artwork").trim(),
-        description: (descInput.value || "").trim(),
-        artist: (artistInput.value || "").trim(),
-        image: imageFile.name,
-        properties: { sha256: generatedHash, createdAt: new Date().toISOString() },
-      }, null, 2)], { type: "application/json" });
-      const metadataUrl = URL.createObjectURL(metadataBlob);
-      const metadataFileName = `${(titleInput.value || "artwork").replace(/\s+/g, "_")}_metadata.json`;
-
-      const localMetadata = {
-        tokenId: mintedId || null,
-        contract: CONTRACT_ADDRESS,
-        tokenURI: mintedTokenURI,
-        artist: (artistInput.value || "").trim(),
-        title: (titleInput.value || "Untitled Artwork").trim(),
-        description: (descInput.value || "").trim(),
-        imageFileName: imageFile.name,
-        imageLocalURL: imageUrl,      // Offline accessible image URL
-        metadataFileName: metadataFileName,
-        metadataLocalURL: metadataUrl, // Offline accessible metadata URL
-        sha256: generatedHash,
-        mintedAt: new Date().toISOString()
-      };
-
-      allMints.push(localMetadata);
-      localStorage.setItem("allMints", JSON.stringify(allMints, null, 2));
-
-      // Optional: auto-download full gallery JSON
-      const blob = new Blob([JSON.stringify(allMints, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `all_minted_artworks.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      console.warn("Failed to store local metadata:", err);
-    }
-
-
+        // event parse
+        let mintedId = null;
+        if (receipt.events) {
+          for (const ev of receipt.events) {
+            if (ev.event === "Minted") {
+              const args = ev.args || {};
+              mintedId = args.tokenId || args[2] || null;
+              break;
+            }
+          }
+        }
+        if (mintedId) {
+          setStatus(
+            "success",
+            `Minted! Your artwork ID is ${mintedId}. View on <a target="_blank" href="https://polygonscan.com/tx/${tx.hash}">Polygonscan</a>`
+          );
+        } else {
+          setStatus("success", "Minted! Transaction confirmed.");
+        }
+        mintBtn.disabled = false;
       } catch (e) {
         console.error(e);
         setStatus("error", "Minting failed: " + (e.message || e));
@@ -475,25 +393,27 @@ async function mintArtwork() {
       }
     }
 
-
-
-    function copyToClipboard(text) {
-      if (!text) return setStatus("error", "Nothing to copy");
-      navigator.clipboard.writeText(text).then(
-        () => setStatus("success", "Copied to clipboard"),
-        (err) => { console.warn(err); setStatus("error", "Copy failed"); }
-      );
-    }
-
+    // ensure button touch friendliness: add pointer events fallback
     function addClickListener(el, handler) {
       if (!el) return;
       el.addEventListener("click", handler);
-      el.addEventListener("touchstart", function touchHandler(e) {
-        e.preventDefault(); handler(e);
-      }, { once: false });
+      el.addEventListener(
+        "touchstart",
+        function touchHandler(e) {
+          e.preventDefault();
+          handler(e);
+        },
+        { once: false }
+      );
     }
+
+    // example: attach to generate and mint buttons safely
+    // const generateHashBtn = document.getElementById("generateHashBtn");
+    // const mintBtn = document.getElementById("mintBtn");
     if (generateHashBtn) addClickListener(generateHashBtn, generateArtHash);
     if (mintBtn) addClickListener(mintBtn, mintArtwork);
 
+    // existing generateArtHash implementation should append #copyHashBtn inside hashDisplay.
+    // ensure any copy button created earlier uses .btn class (styling handled in CSS).
   })().catch(console.error);
 });
