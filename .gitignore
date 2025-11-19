@@ -21,8 +21,8 @@ coverage/
 coverage-final.json
 
 # Generated frontend files from deploy script
-frontend/abi.json
-frontend/contract-address.json
+# frontend/abi.json
+# frontend/contract-address.json
 
 # TypeScript
 *.tsbuildinfo
@@ -62,4 +62,4 @@ out/
 *.jks
 
 # Local frontend secrets
-frontend/config.js
+# frontend/config.js
