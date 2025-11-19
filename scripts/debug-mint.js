@@ -1,7 +1,7 @@
 const hre = require("hardhat");
 
 async function main() {
-  const addr = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
+  const addr = "0x83adc731564072ca4750e193e5068239a3b2407e";
   const art = await hre.ethers.getContractAt("ArtNFT", addr);
 
   const cost = await art.MINTING_COST();

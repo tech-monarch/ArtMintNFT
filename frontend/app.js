@@ -29,7 +29,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     CONTRACT_ADDRESS =
-      CONTRACT_ADDRESS || "0x5FbDB2315678afecb367f032d93F642f64180aa3";
+      CONTRACT_ADDRESS || "0x83adc731564072ca4750e193e5068239a3b2407e";
     contractABI = contractABI || [
       "function mint(string tokenURI) public payable returns (uint256)",
       "function MINTING_COST() public view returns (uint256)",

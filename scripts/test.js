@@ -1,4 +1,4 @@
-const addr = "0x5FbDB2315678afecb367f032d93F642f64180aa3"; // deployed address
+const addr = "0x83adc731564072ca4750e193e5068239a3b2407e"; // deployed address
 const art = await ethers.getContractAt("ArtNFT", addr);
 
 // token owner and metadata
