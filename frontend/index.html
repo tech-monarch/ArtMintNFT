@@ -183,7 +183,6 @@
           font-size: 1rem;
         }
       }
-      /* ensure copy button uses same btn class but can be smaller on desktop */
       #copyHashBtn {
         display: inline-block;
         margin-top: 8px;
@@ -198,7 +197,7 @@
         <h1 class="logo"><img src="logo.png" alt="ArtHashChain" /></h1>
         <div style="margin-top:8px;">
           <button class="btn" id="connectWallet">Connect Wallet</button>
-          <span class="wallet-status" id="walletStatus" style="margin-left:12px;">Wallet: Not connected</span>
+          <span class="wallet-status" id="walletStatus">Wallet: Not connected</span>
         </div>
       </header>
 
@@ -219,10 +218,8 @@
 
       <div class="form-group">
         <label>Upload Artwork</label>
-
         <div class="image-upload" id="imageUpload">
           <div>Tap to upload or drop file</div>
-          <!-- hidden file input (named artFile to match your JS) -->
           <input type="file" id="artFile" accept="image/*" style="display:none" />
           <img id="imagePreview" class="image-preview" style="display:none" />
         </div>
@@ -234,13 +231,30 @@
       </div>
 
       <div id="hashDisplay" class="hash-display"></div>
-
       <button class="btn" id="copyHashBtn" style="display:none">Copy Hash</button>
-
       <div id="statusMessage" class="status"></div>
     </div>
 
-    <!-- load local dev nft.storage key (DO NOT commit) -->
+    <script>
+      // Make the dashed area clickable and show preview on mobile
+      const imageUpload = document.getElementById("imageUpload");
+      const artFile = document.getElementById("artFile");
+      const imagePreview = document.getElementById("imagePreview");
+
+      imageUpload.addEventListener("click", () => artFile.click());
+
+      artFile.addEventListener("change", () => {
+        if (artFile.files && artFile.files[0]) {
+          const reader = new FileReader();
+          reader.onload = e => {
+            imagePreview.src = e.target.result;
+            imagePreview.style.display = "block";
+          };
+          reader.readAsDataURL(artFile.files[0]);
+        }
+      });
+    </script>
+
     <script src="config.js"></script>
     <script src="app.js"></script>
   </body>
