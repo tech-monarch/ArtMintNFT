@@ -4,8 +4,7 @@ require("dotenv").config();
 
 const INFURA_PROJECT_ID = process.env.INFURA_PROJECT_ID || "";
 const POLYGON_PRIVATE_KEY = process.env.POLYGON_PRIVATE_KEY || "";
-
-// Optional Mumbai RPC (testnet)
+const POLYGON_RPC = process.env.POLYGON_RPC || "";
 const MUMBAI_RPC = process.env.MUMBAI_RPC || "";
 
 module.exports = {
@@ -24,27 +23,22 @@ module.exports = {
       chainId: 31337,
     },
 
-    // Polygon Mumbai (Testnet)
     mumbai: {
-      url: 
+      url:
         MUMBAI_RPC ||
-        (INFURA_PROJECT_ID
-          ? `https://polygon-mumbai.infura.io/v3/${INFURA_PROJECT_ID}`
-          : ""),
+        (INFURA_PROJECT_ID ? `https://polygon-mumbai.infura.io/v3/${INFURA_PROJECT_ID}` : ""),
       chainId: 80001,
       accounts: POLYGON_PRIVATE_KEY ? [POLYGON_PRIVATE_KEY] : [],
     },
 
-    // Polygon MAINNET (the one your client uses)
     polygon: {
-      url: process.env.POLYGON_RPC || 
-           (INFURA_PROJECT_ID
-            ? `https://polygon-mainnet.infura.io/v3/${INFURA_PROJECT_ID}`
-            : ""),
-        chainId: 137,
-        accounts: POLYGON_PRIVATE_KEY ? [POLYGON_PRIVATE_KEY] : [],
-      },
+      url:
+        POLYGON_RPC ||
+        (INFURA_PROJECT_ID ? `https://polygon-mainnet.infura.io/v3/${INFURA_PROJECT_ID}` : ""),
+      chainId: 137,
+      accounts: POLYGON_PRIVATE_KEY ? [POLYGON_PRIVATE_KEY] : [],
     },
+  },
 
   etherscan: {
     apiKey: {

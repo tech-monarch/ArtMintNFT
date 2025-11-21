@@ -1,4 +1,4 @@
-// filepath: art-minting/contracts/ArtNFT.sol
+// contracts/ArtNFT.sol
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
@@ -12,6 +12,8 @@ contract ArtNFT is ERC721URIStorage, Ownable, ReentrancyGuard {
 
     uint256 public tokenCounter;
     address payable public platformWallet;
+    // NOTE: `1 ether` here is unit denomination (wei). On Polygon the native token is MATIC,
+    // so this implies a cost of 1 MATIC (in wei).
     uint256 public constant MINTING_COST = 1 ether;
 
     event Minted(address indexed minter, uint256 indexed tokenId, string tokenURI, uint256 valueReceived);
