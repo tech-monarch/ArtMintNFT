@@ -9,6 +9,7 @@
     :root {
       --primary: #8247e5;
       --secondary: #1e1e1e;
+      --light: #f8f9fa;
       --success: #28a745;
       --error: #dc3545;
     }
@@ -88,9 +89,6 @@
   </div>
 
   <script>
-    // ====== CONFIG ======
-    const PINATA_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiIyODAxZjFjZC1lY2QyLTRmOTAtODFmNC1jOWI1YmJmNGU5NWMiLCJlbWFpbCI6Im9kZWlnb25pQGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJwaW5fcG9saWN5Ijp7InJlZ2lvbnMiOlt7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6IkZSQTEifSx7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6Ik5ZQzEifV0sInZlcnNpb24iOjF9LCJtZmFfZW5hYmxlZCI6ZmFsc2UsInN0YXR1cyI6IkFDVElWRSJ9LCJhdXRoZW50aWNhdGlvblR5cGUiOiJzY29wZWRLZXkiLCJzY29wZWRLZXlLZXkiOiI2MWM4NTFmNzhmODkyYjU1MDc2YSIsInNjb3BlZEtleVNlY3JldCI6IjZkYzMyMzc4YjQ2MWY4NmRhNGJhZWRlY2VkZWZjZjU1ZDg5ZmNmOTczN2ZhYWMzYTI0NzgyZTVmMmY1YjdhNDMiLCJleHAiOjE3OTU1NTgwNjB9.5MQoEP09VJGrc_K9inzdAzhyi0c2MKBb2y8IAUYCbTQ"; // 🔑 <--- Put your JWT here
-
     let provider, signer, userAddress;
 
     const connectWalletBtn = document.getElementById("connectWallet");
@@ -112,7 +110,7 @@
       setTimeout(()=>status.style.display="none",4000);
     }
 
-    // ====== Wallet ======
+    // Connect wallet
     connectWalletBtn.addEventListener("click", async () => {
       if(!window.ethereum) return alert("MetaMask not installed!");
       provider = new ethers.providers.Web3Provider(window.ethereum);
@@ -124,7 +122,7 @@
       if(network.chainId !== 137) alert("Switch MetaMask to Polygon Mainnet!");
     });
 
-    // ====== File Upload ======
+    // File upload
     imageUpload.addEventListener("click", () => artFile.click());
     artFile.addEventListener("change", () => {
       if(artFile.files && artFile.files[0]){
@@ -139,7 +137,7 @@
       }
     });
 
-    // ====== SHA-256 Hash ======
+    // SHA-256 Hash generation
     generateHashBtn.addEventListener("click", async () => {
       if(!artFile.files[0]) return showStatus("Upload an image first", "error");
       const file = artFile.files[0];
@@ -151,6 +149,7 @@
       copyHashBtn.style.display = "inline-block";
       mintBtn.disabled = false;
 
+      // Metadata preview
       document.getElementById("previewImage").src = imagePreview.src;
       document.getElementById("previewTitle").textContent = document.getElementById("artTitle").value;
       document.getElementById("previewArtist").textContent = document.getElementById("artistName").value;
@@ -160,88 +159,80 @@
       metadataDisplay.style.display = "block";
     });
 
-    // ====== Copy Hash ======
+    // Copy hash
     copyHashBtn.addEventListener("click", () => {
       navigator.clipboard.writeText(hashDisplay.textContent)
         .then(()=>showStatus("Hash copied!", "success"))
         .catch(()=>showStatus("Copy failed!", "error"));
     });
 
-    // ====== Pinata Upload ======
+    // Pinata upload
     async function uploadToPinata(file) {
       const formData = new FormData();
       formData.append("file", file);
       const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${PINATA_JWT}` }, // 🔑 JWT used here
+        method:"POST",
+        headers:{
+          pinata_api_key: "24d727b6a10f15e2b20f",
+          pinata_secret_api_key: "d43b67e5ae482cbc16c1dadb6749cb5d44feb7b7e999546cc55fb71225833f42"
+        },
         body: formData
       });
-      if(!res.ok) throw new Error(await res.text());
       const data = await res.json();
       return `https://gateway.pinata.cloud/ipfs/${data.IpfsHash}`;
     }
 
     async function uploadMetadata(metadata) {
       const res = await fetch("https://api.pinata.cloud/pinning/pinJSONToIPFS", {
-        method: "POST",
-        headers: {
+        method:"POST",
+        headers:{
           "Content-Type":"application/json",
-          Authorization: `Bearer ${PINATA_JWT}` // 🔑 JWT used here too
+          pinata_api_key: "24d727b6a10f15e2b20f",
+          pinata_secret_api_key: "d43b67e5ae482cbc16c1dadb6749cb5d44feb7b7e999546cc55fb71225833f42"
         },
         body: JSON.stringify(metadata)
       });
-      if(!res.ok) throw new Error(await res.text());
       const data = await res.json();
       return `https://gateway.pinata.cloud/ipfs/${data.IpfsHash}`;
     }
 
-    // ====== Mint NFT ======
+    // Mint NFT
     mintBtn.addEventListener("click", async () => {
       if(!signer) return showStatus("Connect wallet first!", "error");
       mintBtn.disabled = true;
-      try {
-        showStatus("Uploading image...", "success");
-        const imageURL = await uploadToPinata(artFile.files[0]);
+      showStatus("Uploading image...", "success");
+      const imageURL = await uploadToPinata(artFile.files[0]);
+      showStatus("Uploading metadata...", "success");
+      const metadata = {
+        name: document.getElementById("artTitle").value,
+        artist: document.getElementById("artistName").value,
+        description: document.getElementById("description").value,
+        image: imageURL,
+        hash: hashDisplay.textContent,
+        timestamp: new Date().toISOString()
+      };
+      const metadataURL = await uploadMetadata(metadata);
 
-        showStatus("Uploading metadata...", "success");
-        const metadata = {
-          name: document.getElementById("artTitle").value,
-          artist: document.getElementById("artistName").value,
-          description: document.getElementById("description").value,
-          image: imageURL,
-          hash: hashDisplay.textContent,
-          timestamp: new Date().toISOString()
-        };
-        const metadataURL = await uploadMetadata(metadata);
+      // Mint on-chain
+      const contractAddress = "0xe28C830290c48E7d03405eE2F4E76F259ceB2432";
+      const abi = [ "function mintNFT(address to, string memory tokenURI) public returns (uint256)" ];
+      const contract = new ethers.Contract(contractAddress, abi, signer);
+      const tx = await contract.mintNFT(userAddress, metadataURL);
+      const receipt = await tx.wait();
 
-        showStatus("Minting NFT on Polygon...", "success");
-        const contractAddress = "0xe28C830290c48E7d03405eE2F4E76F259ceB2432";
-        const abi = ["function mintNFT(address to, string memory tokenURI) public returns (uint256)"];
-        const contract = new ethers.Contract(contractAddress, abi, signer);
-
-        const tx = await contract.mintNFT(userAddress, metadataURL);
-        const receipt = await tx.wait();
-        const tokenId = receipt.events?.[0]?.args?.tokenId?.toString() || "N/A";
-
-        document.getElementById("mintContract").textContent = contractAddress;
-        document.getElementById("mintToken").textContent = tokenId;
-        document.getElementById("mintMetadataLink").href = metadataURL;
-        document.getElementById("mintMetadataLink").textContent = metadataURL;
-        document.getElementById("mintResult").style.display = "block";
-
-        showStatus("NFT minted successfully!", "success");
-      } catch (err) {
-        console.error(err);
-        showStatus(err.message || "Minting failed", "error");
-      }
+      document.getElementById("mintContract").textContent = contractAddress;
+      document.getElementById("mintToken").textContent = receipt.events[0].args[2] || "N/A";
+      document.getElementById("mintMetadataLink").href = metadataURL;
+      document.getElementById("mintMetadataLink").textContent = metadataURL;
+      document.getElementById("mintResult").style.display="block";
+      showStatus("NFT minted successfully!", "success");
       mintBtn.disabled = false;
     });
 
-    // ====== Copy Buttons ======
+    // Copy buttons
     document.getElementById("copyContractBtn").addEventListener("click",()=>navigator.clipboard.writeText(document.getElementById("mintContract").textContent));
     document.getElementById("copyTokenBtn").addEventListener("click",()=>navigator.clipboard.writeText(document.getElementById("mintToken").textContent));
     document.getElementById("copyMetadataBtn").addEventListener("click",()=>navigator.clipboard.writeText(document.getElementById("mintMetadataLink").href));
-
   </script>
 </body>
 </html>
