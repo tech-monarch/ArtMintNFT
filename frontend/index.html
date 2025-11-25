@@ -357,12 +357,26 @@ mintBtn.onclick = async () => {
   if (!signer) return showStatus("Connect wallet first!", "error");
 
   mintBtn.disabled = true;
-  mintBtn.textContent = "Minting..."; // show loading text
+  mintBtn.textContent = "Minting...";
 
   try {
+    // 1️⃣ Check wallet balance
+    const balance = await provider.getBalance(userAddress);
+    const mintPrice = ethers.utils.parseEther("1.0"); // your mint cost
+    const gasEstimate = ethers.utils.parseUnits("0.05", "ether"); // approx gas buffer
+
+    if (balance.lt(mintPrice.add(gasEstimate))) {
+      showStatus("Insufficient MATIC for mint + gas. Please fund your wallet.", "error");
+      mintBtn.disabled = false;
+      mintBtn.textContent = "Mint Artwork";
+      return;
+    }
+
+    // 2️⃣ Upload image
     showStatus("Uploading image to IPFS...", "success");
     const imageURL = await uploadFile(artFile.files[0]);
 
+    // 3️⃣ Upload metadata
     const metadata = {
       name: document.getElementById("artTitle").value,
       artist: document.getElementById("artistName").value,
@@ -375,37 +389,30 @@ mintBtn.onclick = async () => {
     showStatus("Uploading metadata to IPFS...", "success");
     const metadataURL = await uploadMetadata(metadata);
 
+    // 4️⃣ Mint NFT
     showStatus("Minting on Polygon...", "success");
-
     const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
 
-    const tx = await contract.mint(metadataURL, {
-      value: ethers.utils.parseEther("1.0")
-    });
-
+    const tx = await contract.mint(metadataURL, { value: mintPrice });
     showStatus("Waiting for blockchain confirmation...", "success");
-
     const receipt = await tx.wait();
 
-    // SAFER: handle cases where events might not exist
+    // 5️⃣ Handle token ID
     let tokenId = null;
     if (receipt && receipt.events) {
       for (const e of receipt.events) {
-        // Check both Transfer event and generic args
         if (e.event === "Transfer" && e.args) {
           tokenId = e.args[2]?.toString() || e.args[0]?.toString();
           break;
         }
       }
     }
-
     if (!tokenId) {
-      // fallback: if no events found, just show tx hash instead
       tokenId = tx.hash;
       showStatus("No Transfer event found. Using tx hash as token ID.", "error");
     }
 
-    // Display result
+    // 6️⃣ Display mint result
     document.getElementById("mintContract").textContent = CONTRACT_ADDRESS;
     document.getElementById("mintToken").textContent = tokenId;
     document.getElementById("mintMetadataLink").href = metadataURL;
@@ -424,7 +431,7 @@ mintBtn.onclick = async () => {
   }
 
   mintBtn.disabled = false;
-  mintBtn.textContent = "Mint Artwork"; // reset button text
+  mintBtn.textContent = "Mint Artwork";
 };
 
   // ======================
