@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ArtHashChain | Mint Your Digital Art</title>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+  <style>
+    :root {
+      --primary: #8247e5;
+      --secondary: #1e1e1e;
+      --success: #28a745;
+      --error: #dc3545;
+    }
+    body { font-family: Segoe UI, Tahoma, Geneva, Verdana, sans-serif; background:#f5f5f5; color: var(--secondary); margin:0; padding:0; }
+    .container { max-width: 920px; margin: 20px auto; background: #fff; border-radius: 14px; padding:28px; box-shadow:0 6px 18px rgba(0,0,0,0.08);}
+    header { text-align:center; margin-bottom:20px;}
+    h1.logo img { width:160px; display:block; margin:0 auto;}
+    .wallet-status { display:inline-block; padding:6px 12px; border-radius:18px; background:#e9ecef; font-size:0.95rem; }
+    .form-group { margin-bottom:14px;}
+    label { display:block; font-weight:600; margin-bottom:6px;}
+    input[type="text"], textarea { width:100%; padding:10px; border:1px solid #d6d6d6; border-radius:8px; font-size:1rem; box-sizing:border-box;}
+    textarea { min-height:90px; resize: vertical;}
+    .image-upload { border:2px dashed #ced4da; padding:16px; border-radius:8px; text-align:center; cursor:pointer; }
+    .image-preview { display:block; max-width:100%; margin-top:12px; border-radius:8px; }
+    .btn { background: var(--primary); color:white; border:none; padding:12px 18px; border-radius:10px; cursor:pointer; font-weight:700; margin-top:6px;}
+    .btn:disabled { opacity:.65; cursor:not-allowed; }
+    .hash-display, .mint-result, #metadataDisplay { word-break: break-all; padding:10px; border-radius:8px; background:#fafafa; margin-top:12px;}
+    .status { padding:10px; border-radius:8px; margin-top:12px; display:none; color:white; font-weight:600;}
+    .status.success { background-color: var(--success); }
+    .status.error { background-color: var(--error); }
+    #copyHashBtn, #copyContractBtn, #copyTokenBtn, #copyMetadataBtn { margin-left:6px; padding:6px 10px; font-size:0.9rem; cursor:pointer; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1 class="logo"><img src="arthashchain.png" alt="ArtHashChain" /></h1>
+      <button class="btn" id="connectWallet">Connect Wallet</button>
+      <span class="wallet-status" id="walletStatus">Wallet: Not connected</span>
+    </header>
+
+    <div class="form-group">
+      <label>Artwork Title</label>
+      <input type="text" id="artTitle" placeholder="Enter artwork title">
+    </div>
+    <div class="form-group">
+      <label>Artist Name</label>
+      <input type="text" id="artistName" placeholder="Artist or your name">
+    </div>
+    <div class="form-group">
+      <label>Description</label>
+      <textarea id="description" placeholder="Short description"></textarea>
+    </div>
+    <div class="form-group">
+      <label>Upload Artwork</label>
+      <div class="image-upload" id="imageUpload">
+        <div>Click to upload or drop file</div>
+        <input type="file" id="artFile" accept="image/*" style="display:none;">
+        <img id="imagePreview" class="image-preview" style="display:none;">
+      </div>
+    </div>
+
+    <button class="btn" id="generateHashBtn" disabled>Generate Hash</button>
+    <button class="btn" id="mintBtn" disabled>Mint Artwork</button>
+
+    <div id="hashDisplay" class="hash-display" style="display:none;"></div>
+    <button id="copyHashBtn" style="display:none;" class="btn">Copy Hash</button>
+
+    <div id="statusMessage" class="status"></div>
+
+    <div id="metadataDisplay" style="display:none;">
+      <h3>NFT Preview</h3>
+      <img id="previewImage" src="" alt="Artwork Preview" style="max-width:200px; margin-bottom:10px;">
+      <p><strong>Title:</strong> <span id="previewTitle"></span></p>
+      <p><strong>Artist:</strong> <span id="previewArtist"></span></p>
+      <p><strong>Description:</strong> <span id="previewDescription"></span></p>
+      <p><strong>SHA-256 Hash:</strong> <span id="previewHash"></span></p>
+      <p><strong>Timestamp:</strong> <span id="previewTimestamp"></span></p>
+    </div>
+
+    <div id="mintResult" style="display:none;">
+      <h3>Mint Successful!</h3>
+      <p>Contract: <span id="mintContract"></span> <button id="copyContractBtn">Copy</button></p>
+      <p>Token ID: <span id="mintToken"></span> <button id="copyTokenBtn">Copy</button></p>
+      <p>Metadata URL: <a id="mintMetadataLink" target="_blank"></a> <button id="copyMetadataBtn">Copy</button></p>
+    </div>
+  </div>
+
+  <script>
+    // ====== CONFIG ======
+    const PINATA_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiIyODAxZjFjZC1lY2QyLTRmOTAtODFmNC1jOWI1YmJmNGU5NWMiLCJlbWFpbCI6Im9kZWlnb25pQGdtYWlsLmNvbSIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJwaW5fcG9saWN5Ijp7InJlZ2lvbnMiOlt7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6IkZSQTEifSx7ImRlc2lyZWRSZXBsaWNhdGlvbkNvdW50IjoxLCJpZCI6Ik5ZQzEifV0sInZlcnNpb24iOjF9LCJtZmFfZW5hYmxlZCI6ZmFsc2UsInN0YXR1cyI6IkFDVElWRSJ9LCJhdXRoZW50aWNhdGlvblR5cGUiOiJzY29wZWRLZXkiLCJzY29wZWRLZXlLZXkiOiI2MWM4NTFmNzhmODkyYjU1MDc2YSIsInNjb3BlZEtleVNlY3JldCI6IjZkYzMyMzc4YjQ2MWY4NmRhNGJhZWRlY2VkZWZjZjU1ZDg5ZmNmOTczN2ZhYWMzYTI0NzgyZTVmMmY1YjdhNDMiLCJleHAiOjE3OTU1NTgwNjB9.5MQoEP09VJGrc_K9inzdAzhyi0c2MKBb2y8IAUYCbTQ"; // 🔑 <--- Put your JWT here
+
+    let provider, signer, userAddress;
+
+    const connectWalletBtn = document.getElementById("connectWallet");
+    const walletStatus = document.getElementById("walletStatus");
+    const artFile = document.getElementById("artFile");
+    const imageUpload = document.getElementById("imageUpload");
+    const imagePreview = document.getElementById("imagePreview");
+    const generateHashBtn = document.getElementById("generateHashBtn");
+    const mintBtn = document.getElementById("mintBtn");
+    const hashDisplay = document.getElementById("hashDisplay");
+    const copyHashBtn = document.getElementById("copyHashBtn");
+    const status = document.getElementById("statusMessage");
+    const metadataDisplay = document.getElementById("metadataDisplay");
+
+    function showStatus(msg, type) {
+      status.textContent = msg;
+      status.className = `status ${type}`;
+      status.style.display = "block";
+      setTimeout(()=>status.style.display="none",4000);
+    }
+
+    // ====== Wallet ======
+    connectWalletBtn.addEventListener("click", async () => {
+      if(!window.ethereum) return alert("MetaMask not installed!");
+      provider = new ethers.providers.Web3Provider(window.ethereum);
+      await provider.send("eth_requestAccounts", []);
+      signer = provider.getSigner();
+      userAddress = await signer.getAddress();
+      walletStatus.textContent = `Wallet: ${userAddress}`;
+      const network = await provider.getNetwork();
+      if(network.chainId !== 137) alert("Switch MetaMask to Polygon Mainnet!");
+    });
+
+    // ====== File Upload ======
+    imageUpload.addEventListener("click", () => artFile.click());
+    artFile.addEventListener("change", () => {
+      if(artFile.files && artFile.files[0]){
+        const reader = new FileReader();
+        reader.onload = e => {
+          imagePreview.src = e.target.result;
+          imagePreview.style.display = "block";
+          generateHashBtn.disabled = false;
+          showStatus("File loaded", "success");
+        }
+        reader.readAsDataURL(artFile.files[0]);
+      }
+    });
+
+    // ====== SHA-256 Hash ======
+    generateHashBtn.addEventListener("click", async () => {
+      if(!artFile.files[0]) return showStatus("Upload an image first", "error");
+      const file = artFile.files[0];
+      const arrayBuffer = await file.arrayBuffer();
+      const hashBuffer = await crypto.subtle.digest("SHA-256", arrayBuffer);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const hashHex = "0x" + hashArray.map(b=>b.toString(16).padStart(2,'0')).join('');
+      hashDisplay.textContent = hashHex;
+      copyHashBtn.style.display = "inline-block";
+      mintBtn.disabled = false;
+
+      document.getElementById("previewImage").src = imagePreview.src;
+      document.getElementById("previewTitle").textContent = document.getElementById("artTitle").value;
+      document.getElementById("previewArtist").textContent = document.getElementById("artistName").value;
+      document.getElementById("previewDescription").textContent = document.getElementById("description").value;
+      document.getElementById("previewHash").textContent = hashHex;
+      document.getElementById("previewTimestamp").textContent = new Date().toLocaleString();
+      metadataDisplay.style.display = "block";
+    });
+
+    // ====== Copy Hash ======
+    copyHashBtn.addEventListener("click", () => {
+      navigator.clipboard.writeText(hashDisplay.textContent)
+        .then(()=>showStatus("Hash copied!", "success"))
+        .catch(()=>showStatus("Copy failed!", "error"));
+    });
+
+    // ====== Pinata Upload ======
+    async function uploadToPinata(file) {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${PINATA_JWT}` }, // 🔑 JWT used here
+        body: formData
+      });
+      if(!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      return `https://gateway.pinata.cloud/ipfs/${data.IpfsHash}`;
+    }
+
+    async function uploadMetadata(metadata) {
+      const res = await fetch("https://api.pinata.cloud/pinning/pinJSONToIPFS", {
+        method: "POST",
+        headers: {
+          "Content-Type":"application/json",
+          Authorization: `Bearer ${PINATA_JWT}` // 🔑 JWT used here too
+        },
+        body: JSON.stringify(metadata)
+      });
+      if(!res.ok) throw new Error(await res.text());
+      const data = await res.json();
+      return `https://gateway.pinata.cloud/ipfs/${data.IpfsHash}`;
+    }
+
+    // ====== Mint NFT ======
+    mintBtn.addEventListener("click", async () => {
+      if(!signer) return showStatus("Connect wallet first!", "error");
+      mintBtn.disabled = true;
+      try {
+        showStatus("Uploading image...", "success");
+        const imageURL = await uploadToPinata(artFile.files[0]);
+
+        showStatus("Uploading metadata...", "success");
+        const metadata = {
+          name: document.getElementById("artTitle").value,
+          artist: document.getElementById("artistName").value,
+          description: document.getElementById("description").value,
+          image: imageURL,
+          hash: hashDisplay.textContent,
+          timestamp: new Date().toISOString()
+        };
+        const metadataURL = await uploadMetadata(metadata);
+
+        showStatus("Minting NFT on Polygon...", "success");
+        const contractAddress = "0xe28C830290c48E7d03405eE2F4E76F259ceB2432";
+        const abi = ["function mintNFT(address to, string memory tokenURI) public returns (uint256)"];
+        const contract = new ethers.Contract(contractAddress, abi, signer);
+
+        // price in MATIC — change this to EXACT price required by contract!
+        const price = "0.01";  
+
+        const tx = await contract.mintNFT(userAddress, metadataURL, {
+          value: ethers.utils.parseEther(price)
+        });
+
+        const receipt = await tx.wait();
+        const tokenId = receipt.events?.[0]?.args?.tokenId?.toString() || "N/A";
+
+        document.getElementById("mintContract").textContent = contractAddress;
+        document.getElementById("mintToken").textContent = tokenId;
+        document.getElementById("mintMetadataLink").href = metadataURL;
+        document.getElementById("mintMetadataLink").textContent = metadataURL;
+        document.getElementById("mintResult").style.display = "block";
+
+        showStatus("NFT minted successfully!", "success");
+      } catch (err) {
+        console.error(err);
+        showStatus(err.message || "Minting failed", "error");
+      }
+      mintBtn.disabled = false;
+    });
+
+    // ====== Copy Buttons ======
+    document.getElementById("copyContractBtn").addEventListener("click",()=>navigator.clipboard.writeText(document.getElementById("mintContract").textContent));
+    document.getElementById("copyTokenBtn").addEventListener("click",()=>navigator.clipboard.writeText(document.getElementById("mintToken").textContent));
+    document.getElementById("copyMetadataBtn").addEventListener("click",()=>navigator.clipboard.writeText(document.getElementById("mintMetadataLink").href));
+
+  </script>
+</body>
+</html>
