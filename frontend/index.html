@@ -210,9 +210,14 @@
       </p>
 
       <p><strong>Minted At:</strong> <span id="mintTimestamp"></span></p>
+      <button id="downloadCertificateBtn" class="copy-btn" style="margin-top:10px;">
+        Download Certificate (PDF)
+      </button>
+
     </div>
 
   </div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <script>
 
@@ -449,6 +454,61 @@ mintBtn.onclick = async () => {
     navigator.clipboard.writeText(document.getElementById("mintMetadataLink").href);
     showStatus("Metadata URL copied!", "success");
   };
+
+
+
+
+
+  // ======================
+// 📄 DOWNLOAD CERTIFICATE (PDF)
+// ======================
+document.getElementById("downloadCertificateBtn").onclick = async () => {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+
+  const imgData = document.getElementById("previewImage").src;
+  const title = document.getElementById("previewTitle").textContent;
+  const artist = document.getElementById("previewArtist").textContent;
+  const desc = document.getElementById("previewDescription").textContent;
+  const hash = document.getElementById("previewHash").textContent;
+  const timestamp = document.getElementById("previewTimestamp").textContent;
+  const metadataURL = document.getElementById("mintMetadataLink").href;
+  const tokenID = document.getElementById("mintToken").textContent;
+
+  // Header
+  doc.setFontSize(18);
+  doc.text("ArtHashChain NFT Certificate", 105, 15, { align: "center" });
+
+  // Image
+  try {
+    doc.addImage(imgData, "JPEG", 15, 25, 60, 60);
+  } catch (e) {
+    console.log("Image error:", e);
+  }
+
+  // Details
+  doc.setFontSize(12);
+  doc.text(`Title: ${title}`, 15, 95);
+  doc.text(`Artist: ${artist}`, 15, 105);
+  doc.text(`Description: ${desc}`, 15, 115);
+  doc.text(`Token ID: ${tokenID}`, 15, 125);
+  doc.text(`SHA-256 Hash:`, 15, 135);
+  doc.text(hash, 15, 142);
+  doc.text(`Minted At: ${timestamp}`, 15, 152);
+  doc.text("Metadata URL:", 15, 162);
+
+  // Long URL wrap
+  doc.setFontSize(10);
+  const splitURL = doc.splitTextToSize(metadataURL, 180);
+  doc.text(splitURL, 15, 170);
+
+  // Footer
+  doc.setFontSize(10);
+  doc.text("© Reuben Igoni Art Foundation - NFT Mint Certificate", 105, 290, { align: "center" });
+
+  // Save PDF
+  doc.save(`NFT-Certificate-${tokenID}.pdf`);
+};
 
 </script>
 <footer style="
